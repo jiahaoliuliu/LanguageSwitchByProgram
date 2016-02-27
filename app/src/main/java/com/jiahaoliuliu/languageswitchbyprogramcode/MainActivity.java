@@ -1,22 +1,25 @@
 package com.jiahaoliuliu.languageswitchbyprogramcode;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
-import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.util.Log;
 
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+import com.jiahaoliuliu.languageswitchbyprogramcode.Preferences.StringId;
+
+public class MainActivity extends AppCompatActivity implements IOnNewLanguageSelected{
+
+    private static final String TAG = "MainActivity";
 
     public enum Language {
         English("en"), Español("es"), Svenska("se"), العربية("ar"), Deutsch("de"), Tagalog("tl");
@@ -33,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Internal variables
     private Context mContext;
+    private Preferences mPreferences;
 
     // Views
     private RecyclerView mLanguageSelectionRecyclerView;
@@ -43,7 +47,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mContext = this;
+        this.mContext = this;
+        this.mPreferences = new Preferences(mContext);
+
+        // The locale should be set before setting the content view
+        if (mPreferences.contains(StringId.LANGUAGE_ISO_CODE)) {
+            setLocale(mPreferences.get(StringId.LANGUAGE_ISO_CODE));
+        }
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -63,7 +73,43 @@ public class MainActivity extends AppCompatActivity {
         mLanguageSelectionRecyclerView.setLayoutManager(mLanguageSelectionLayoutManager);
 
         // Set the adapter
-        mLanguageSelectionAdapter = new LanguageSelectionAdapter(this, Language.values());
+        mLanguageSelectionAdapter = new LanguageSelectionAdapter(this, Language.values(), this);
         mLanguageSelectionRecyclerView.setAdapter(mLanguageSelectionAdapter);
+    }
+
+    @Override
+    public void selectNewLanguage(Language newLanguage) {
+        mPreferences.set(StringId.LANGUAGE_ISO_CODE, newLanguage.getIsoCode());
+        restartApp();
+    }
+
+    private void setLocale(String isoCode) {
+        Log.v(TAG, "Set the new language to " + isoCode);
+        Resources res = mContext.getResources();
+        // Change locale settings in the app.
+        DisplayMetrics dm = res.getDisplayMetrics();
+        android.content.res.Configuration conf = res.getConfiguration();
+        conf.locale = new Locale(isoCode);
+        res.updateConfiguration(conf, dm);
+    }
+
+    private void restartApp() {
+        finish();
+    }
+
+    @Override
+    protected void onDestroy() {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+        // Intent for the pending intent
+        Intent intent = new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        // Set the pending intent
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // Wait for 500ms before start
+        alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 500, pendingIntent);
+        android.os.Process.killProcess(android.os.Process.myPid());
+        super.onDestroy();
     }
 }

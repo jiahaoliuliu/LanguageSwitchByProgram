@@ -26,12 +26,15 @@ public class LanguageSelectionAdapter extends RecyclerView.Adapter<LanguageSelec
         }
     }
 
+    // Internal variables
     private Context mContext;
     private Language[] mLanguagesList;
+    private IOnNewLanguageSelected mOnNewLanguageSelected;
 
-    public LanguageSelectionAdapter(Context context, Language[] languagesList) {
+    public LanguageSelectionAdapter(Context context, Language[] languagesList, IOnNewLanguageSelected onNewLanguageSelected) {
         this.mContext = context;
         this.mLanguagesList = languagesList;
+        this.mOnNewLanguageSelected = onNewLanguageSelected;
     }
 
     @Override
@@ -53,7 +56,7 @@ public class LanguageSelectionAdapter extends RecyclerView.Adapter<LanguageSelec
                 // Position clicked
                 Toast.makeText(mContext, "Setting the new language to " + mLanguagesList[position].toString(),
                         Toast.LENGTH_SHORT).show();
-                setLocale(mLanguagesList[position].getIsoCode());
+                mOnNewLanguageSelected.selectNewLanguage(mLanguagesList[position]);
             }
         });
     }
@@ -63,12 +66,4 @@ public class LanguageSelectionAdapter extends RecyclerView.Adapter<LanguageSelec
         return mLanguagesList.length;
     }
 
-    private void setLocale(String isoCode) {
-        Resources res = mContext.getResources();
-        // Change locale settings in the app.
-        DisplayMetrics dm = res.getDisplayMetrics();
-        android.content.res.Configuration conf = res.getConfiguration();
-        conf.locale = new Locale(isoCode);
-        res.updateConfiguration(conf, dm);
-    }
 }
